@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
@@ -6,11 +5,10 @@ import { useAuth } from "../contexts/AuthContext";
 import { toast } from "./ui/sonner";
 
 const PremiumBanner: React.FC = () => {
-  const { isPremium } = useAuth();
+  const { isPremium, startPremiumSubscription } = useAuth();
 
-  const handleUpgrade = () => {
-    // This will be replaced with PayPal integration
-    toast.info("Integração com PayPal será implementada em breve!");
+  const handleUpgrade = async () => {
+    await startPremiumSubscription();
   };
 
   if (isPremium) {

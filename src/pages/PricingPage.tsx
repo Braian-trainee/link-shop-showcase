@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
@@ -6,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { toast } from "../components/ui/sonner";
 
 const PricingPage: React.FC = () => {
-  const { user, isPremium } = useAuth();
+  const { user, isPremium, startPremiumSubscription } = useAuth();
 
   const handleFreePlan = () => {
     if (user) {
@@ -16,7 +15,7 @@ const PricingPage: React.FC = () => {
     }
   };
 
-  const handlePremiumPlan = () => {
+  const handlePremiumPlan = async () => {
     if (!user) {
       toast.info("Faça login para assinar o plano premium");
       return;
@@ -27,8 +26,7 @@ const PricingPage: React.FC = () => {
       return;
     }
 
-    // This would integrate with PayPal in the final app
-    toast.info("Integração com PayPal será implementada em breve!");
+    await startPremiumSubscription();
   };
 
   return (

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "../components/ui/sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 type User = {
   id: string;
@@ -15,6 +16,7 @@ type AuthContextType = {
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkPremiumStatus: () => Promise<boolean>;
+  startPremiumSubscription: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,13 +26,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
 
+  const checkPremiumStatus = async () => {
+    try {
+      if (!user) return false;
+      
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+      if (error) throw error;
+      
+      const premium = data.subscribed;
+      setIsPremium(premium);
+      return premium;
+    } catch (error) {
+      console.error("Premium check error:", error);
+      return false;
+    }
+  };
+
+  const startPremiumSubscription = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout');
+      if (error) throw error;
+      
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error("Erro ao iniciar checkout. Tente novamente.");
+    }
+  };
+
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        setIsPremium(parsedUser.isPremium || false);
+        checkPremiumStatus();
       } catch (error) {
         console.error("Failed to parse stored user:", error);
         localStorage.removeItem('user');
@@ -94,29 +126,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const checkPremiumStatus = async () => {
-    try {
-      if (user) {
-        const premium = user.isPremium;
-        setIsPremium(premium);
-        return premium;
-      }
-      return false;
-    } catch (error) {
-      console.error("Premium check error:", error);
-      return false;
-    }
-  };
-
   return (
     <AuthContext.Provider value={{ 
       user, 
       isLoading, 
-      isPremium, 
+      isPremium,
       login, 
       register, 
       logout,
-      checkPremiumStatus
+      checkPremiumStatus,
+      startPremiumSubscription
     }}>
       {children}
     </AuthContext.Provider>
