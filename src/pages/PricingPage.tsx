@@ -177,7 +177,7 @@ const PricingPage: React.FC = () => {
             <div>
               <h3 className="text-lg font-semibold mb-2">Como funciona o pagamento?</h3>
               <p className="text-gray-600">
-                O pagamento é feito via PayPal com renovação mensal automática. Você pode cancelar a qualquer momento.
+                O pagamento é feito via Stripe com renovação mensal automática. Você pode cancelar a qualquer momento.
               </p>
             </div>
             

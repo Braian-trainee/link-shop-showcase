@@ -73,7 +73,7 @@ const RegisterPage: React.FC = () => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  minLength={6}
+                  minLength={8}
                 />
                 <button 
                   type="button"
@@ -88,7 +88,7 @@ const RegisterPage: React.FC = () => {
                 </button>
               </div>
               <p className="text-xs text-gray-500">
-                A senha deve ter pelo menos 6 caracteres
+                A senha deve ter pelo menos 8 caracteres
               </p>
             </div>
 
@@ -100,7 +100,7 @@ const RegisterPage: React.FC = () => {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                minLength={6}
+                minLength={8}
               />
             </div>
           </CardContent>

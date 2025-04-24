@@ -22,7 +22,7 @@ const HomePage: React.FC = () => {
             </h1>
 
             <p className="text-gray-600 text-lg md:text-xl mb-8 max-w-3xl mx-auto">
-              Crie um catálogo de produtos estilo Linktree e compartilhe facilmente com seus clientes.
+              Crie um catálogo de produtos e compartilhe facilmente com seus clientes.
               Adicione imagens, descrições e links para seus produtos em um só lugar.
             </p>
 
