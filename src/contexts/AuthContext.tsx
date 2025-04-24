@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "../components/ui/sonner";
 
@@ -15,7 +14,7 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  checkPremiumStatus: () => Promise<void>;
+  checkPremiumStatus: () => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,7 +25,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
-    // Check local storage for user session on initial load
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
@@ -41,11 +39,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  // This is a placeholder for Supabase integration
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Mock login - will be replaced with Supabase auth
       if (email && password) {
         const mockUser = {
           id: "user_" + Math.random().toString(36).substr(2, 9),
@@ -68,7 +64,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Mock register - will be replaced with Supabase auth
       if (email && password) {
         const mockUser = {
           id: "user_" + Math.random().toString(36).substr(2, 9),
@@ -90,7 +85,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      // Mock logout - will be replaced with Supabase auth
       setUser(null);
       localStorage.removeItem('user');
       toast.success("Logout realizado com sucesso!");
@@ -102,9 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkPremiumStatus = async () => {
     try {
-      // Mock premium check - will be replaced with Supabase + PayPal check
       if (user) {
-        // For demo: randomly set premium status
         const premium = user.isPremium;
         setIsPremium(premium);
         return premium;
