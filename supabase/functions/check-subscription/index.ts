@@ -20,23 +20,25 @@ serve(async (req) => {
   );
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header");
-    
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData } = await supabaseClient.auth.getUser(token);
-    const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated");
+    // Parse the request body for the user data
+    const { email, userId } = await req.json();
+
+    // Validate request data
+    if (!email) {
+      throw new Error("Email is required");
+    }
+
+    console.log("Checking subscription for email:", email);
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     });
     
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    const customers = await stripe.customers.list({ email: email, limit: 1 });
     if (customers.data.length === 0) {
       await supabaseClient.from("subscribers").upsert({
-        email: user.email,
-        user_id: user.id,
+        email: email,
+        user_id: userId || null,
         subscribed: false,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'email' });
@@ -61,8 +63,8 @@ serve(async (req) => {
     }
 
     await supabaseClient.from("subscribers").upsert({
-      email: user.email,
-      user_id: user.id,
+      email: email,
+      user_id: userId || null,
       stripe_customer_id: customerId,
       subscribed: hasActiveSub,
       subscription_end: subscriptionEnd,
@@ -77,6 +79,7 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
+    console.error("Error checking subscription:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,

@@ -1,15 +1,29 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "./ui/sonner";
+import { Loader2 } from "lucide-react";
 
 const PremiumBanner: React.FC = () => {
-  const { isPremium, startPremiumSubscription } = useAuth();
+  const { user, isPremium, startPremiumSubscription } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleUpgrade = async () => {
-    await startPremiumSubscription();
+    if (!user) {
+      toast.error("Por favor, faça login para assinar o plano premium");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await startPremiumSubscription();
+    } catch (error) {
+      console.error("Upgrade error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isPremium) {
@@ -36,8 +50,16 @@ const PremiumBanner: React.FC = () => {
         <Button 
           className="w-full gradient-button"
           onClick={handleUpgrade}
+          disabled={isLoading}
         >
-          Upgrade para Premium por R$19,90/mês
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processando...
+            </>
+          ) : (
+            "Upgrade para Premium por R$19,90/mês"
+          )}
         </Button>
         <p className="text-xs text-center text-muted-foreground">
           Desbloqueie produtos ilimitados e wallpaper personalizado

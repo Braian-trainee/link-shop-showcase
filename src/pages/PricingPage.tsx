@@ -1,11 +1,14 @@
-import React from "react";
+
+import React, { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "../components/ui/sonner";
+import { Loader2 } from "lucide-react";
 
 const PricingPage: React.FC = () => {
   const { user, isPremium, startPremiumSubscription } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleFreePlan = () => {
     if (user) {
@@ -18,6 +21,7 @@ const PricingPage: React.FC = () => {
   const handlePremiumPlan = async () => {
     if (!user) {
       toast.info("Faça login para assinar o plano premium");
+      window.location.href = "/login";
       return;
     }
 
@@ -26,7 +30,14 @@ const PricingPage: React.FC = () => {
       return;
     }
 
-    await startPremiumSubscription();
+    setIsLoading(true);
+    try {
+      await startPremiumSubscription();
+    } catch (error) {
+      console.error("Premium subscription error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -142,8 +153,18 @@ const PricingPage: React.FC = () => {
               <Button
                 className="w-full gradient-button"
                 onClick={handlePremiumPlan}
+                disabled={isLoading}
               >
-                {isPremium ? "Plano Atual" : "Assinar Premium"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processando...
+                  </>
+                ) : isPremium ? (
+                  "Plano Atual"
+                ) : (
+                  "Assinar Premium"
+                )}
               </Button>
             </CardFooter>
           </Card>

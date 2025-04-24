@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "../components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,7 +31,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) return false;
       
-      const { data, error } = await supabase.functions.invoke('check-subscription');
+      const { data, error } = await supabase.functions.invoke('check-subscription', {
+        body: {
+          email: user.email,
+          userId: user.id
+        }
+      });
+      
       if (error) throw error;
       
       const premium = data.subscribed;
@@ -44,7 +51,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const startPremiumSubscription = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout');
+      if (!user) {
+        toast.error("Por favor, faça login para assinar o plano premium");
+        return;
+      }
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          email: user.email,
+          userId: user.id
+        }
+      });
+      
       if (error) throw error;
       
       if (data.url) {
@@ -118,6 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       setUser(null);
+      setIsPremium(false);
       localStorage.removeItem('user');
       toast.success("Logout realizado com sucesso!");
     } catch (error) {

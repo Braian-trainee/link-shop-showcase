@@ -13,31 +13,40 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-  );
-
   try {
-    const authHeader = req.headers.get("Authorization")!;
-    const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
-    const user = data.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
+    // Use service role key to bypass RLS
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    // Parse the request body for the user data
+    const { email, userId } = await req.json();
+
+    // Validate request data
+    if (!email) {
+      throw new Error("Email is required");
+    }
+
+    console.log("Creating checkout session for email:", email);
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     });
 
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    // Check if customer already exists in Stripe
+    const customers = await stripe.customers.list({ email: email, limit: 1 });
     let customerId;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
+      console.log("Found existing customer:", customerId);
     }
 
+    // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      customer_email: customerId ? undefined : user.email,
+      customer_email: customerId ? undefined : email,
       line_items: [
         {
           price_data: {
@@ -57,11 +66,21 @@ serve(async (req) => {
       cancel_url: `${req.headers.get("origin")}/dashboard?canceled=true`,
     });
 
+    // If we have a user ID, update the subscribers table
+    if (userId) {
+      await supabaseClient.from("subscribers").upsert({
+        email: email,
+        user_id: userId,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'email' });
+    }
+
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
+    console.error("Error creating checkout:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
