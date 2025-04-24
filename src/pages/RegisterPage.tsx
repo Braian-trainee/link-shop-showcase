@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "../components/ui/sonner";
 import { Eye, EyeOff } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const RegisterPage: React.FC = () => {
   const { register } = useAuth();
@@ -17,12 +18,18 @@ const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (password !== confirmPassword) {
       toast.error("As senhas não conferem!");
+      return;
+    }
+
+    if (!agreedToTerms) {
+      toast.error("Você precisa concordar com os Termos de Uso e Política de Privacidade.");
       return;
     }
     
@@ -103,12 +110,35 @@ const RegisterPage: React.FC = () => {
                 minLength={8}
               />
             </div>
+
+            <div className="flex items-start space-x-2 pt-2">
+              <Checkbox 
+                id="terms" 
+                checked={agreedToTerms}
+                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label
+                  htmlFor="terms"
+                  className="text-sm text-gray-600 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Ao criar uma conta, concordo com os{" "}
+                  <Link to="/termos" className="text-brand-600 hover:underline" target="_blank">
+                    Termos de Uso
+                  </Link>{" "}
+                  e{" "}
+                  <Link to="/privacidade" className="text-brand-600 hover:underline" target="_blank">
+                    Política de Privacidade
+                  </Link>
+                </label>
+              </div>
+            </div>
           </CardContent>
           <CardFooter className="flex flex-col">
             <Button 
               type="submit" 
               className="w-full gradient-button"
-              disabled={isLoading}
+              disabled={isLoading || !agreedToTerms}
             >
               {isLoading ? "Registrando..." : "Registrar"}
             </Button>

@@ -19,6 +19,8 @@ import DashboardPage from "./pages/DashboardPage";
 import CatalogPage from "./pages/CatalogPage";
 import PricingPage from "./pages/PricingPage";
 import NotFoundPage from "./pages/NotFound";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPage from "./pages/PrivacyPage";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +53,8 @@ const App = () => (
               <Route path="/dashboard" element={<Layout><DashboardPage /></Layout>} />
               <Route path="/catalogo/:id" element={<NoHeaderLayout><CatalogPage /></NoHeaderLayout>} />
               <Route path="/planos" element={<Layout><PricingPage /></Layout>} />
+              <Route path="/termos" element={<Layout><TermsPage /></Layout>} />
+              <Route path="/privacidade" element={<Layout><PrivacyPage /></Layout>} />
               <Route path="*" element={<NoHeaderLayout><NotFoundPage /></NoHeaderLayout>} />
             </Routes>
           </BrowserRouter>
