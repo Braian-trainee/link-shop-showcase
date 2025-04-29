@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { toast } from "./ui/sonner";
-import { Copy, Share, Link, WhatsApp, Instagram, Discord, Telegram } from "lucide-react";
+import { Copy, Share, Link, MessageCircle, Instagram, Hash, Send } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -122,11 +122,11 @@ const ShareLinks: React.FC<ShareLinksProps> = ({ viewLink, editLink }) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleSocialShare('whatsapp', viewLink)}>
-                  <WhatsApp className="mr-2 h-4 w-4" />
+                  <MessageCircle className="mr-2 h-4 w-4" />
                   <span>WhatsApp</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleSocialShare('telegram', viewLink)}>
-                  <Telegram className="mr-2 h-4 w-4" />
+                  <Send className="mr-2 h-4 w-4" />
                   <span>Telegram</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleSocialShare('instagram', viewLink)}>
@@ -134,7 +134,7 @@ const ShareLinks: React.FC<ShareLinksProps> = ({ viewLink, editLink }) => {
                   <span>Instagram</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleSocialShare('discord', viewLink)}>
-                  <Discord className="mr-2 h-4 w-4" />
+                  <Hash className="mr-2 h-4 w-4" />
                   <span>Discord</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
