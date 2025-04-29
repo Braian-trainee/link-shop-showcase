@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { toast } from "./ui/sonner";
-import { Copy, Share, Link, MessageCircle, Instagram, Hash, Send } from "lucide-react";
+import { Copy, Share, Link, MessageCircle, Instagram, Send } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -134,7 +134,11 @@ const ShareLinks: React.FC<ShareLinksProps> = ({ viewLink, editLink }) => {
                   <span>Instagram</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleSocialShare('discord', viewLink)}>
-                  <Hash className="mr-2 h-4 w-4" />
+                  <img 
+                    src="/discord-logo.png" 
+                    alt="Discord" 
+                    className="mr-2 h-4 w-4" 
+                  />
                   <span>Discord</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
