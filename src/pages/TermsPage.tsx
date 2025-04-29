@@ -9,7 +9,7 @@ const TermsPage: React.FC = () => {
 
       <div className="prose max-w-none">
         <p>
-          Bem-vindo(a) ao <strong>LinkShop</strong>, uma plataforma que permite aos usuários criarem páginas personalizadas com links de seus produtos, de forma semelhante ao Linktree. Ao utilizar nosso serviço, você concorda com os termos descritos abaixo.
+          Bem-vindo(a) ao <strong>LinkShop</strong>, uma plataforma que permite aos usuários criarem páginas personalizadas com links de seus produtos. Ao utilizar nosso serviço, você concorda com os termos descritos abaixo.
         </p>
 
         <h2 className="text-xl font-semibold mt-8 mb-3">1. Aceitação dos Termos</h2>
