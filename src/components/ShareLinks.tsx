@@ -4,7 +4,13 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { toast } from "./ui/sonner";
-import { Copy, Share, Link } from "lucide-react";
+import { Copy, Share, Link, WhatsApp, Instagram, Discord, Telegram } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "./ui/dropdown-menu";
 
 interface ShareLinksProps {
   viewLink: string;
@@ -27,6 +33,38 @@ const ShareLinks: React.FC<ShareLinksProps> = ({ viewLink, editLink }) => {
     setTimeout(() => {
       setCopied(null);
     }, 2000);
+  };
+
+  const handleSocialShare = (platform: string, link: string) => {
+    const fullUrl = getFullUrl(link);
+    const text = 'Confira os produtos no meu catálogo digital!';
+    
+    let shareUrl = '';
+    
+    switch (platform) {
+      case 'whatsapp':
+        shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text + ' ' + fullUrl)}`;
+        break;
+      case 'telegram':
+        shareUrl = `https://t.me/share/url?url=${encodeURIComponent(fullUrl)}&text=${encodeURIComponent(text)}`;
+        break;
+      case 'instagram':
+        // Instagram doesn't have a direct sharing URL API, copy to clipboard instead
+        navigator.clipboard.writeText(fullUrl);
+        toast.success("Link copiado! Cole-o na sua história ou mensagem do Instagram.");
+        return;
+      case 'discord':
+        // Discord doesn't have a direct sharing URL API, copy to clipboard instead
+        navigator.clipboard.writeText(fullUrl);
+        toast.success("Link copiado! Cole-o em seu canal ou mensagem do Discord.");
+        return;
+      default:
+        break;
+    }
+    
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleShare = async (link: string) => {
@@ -78,9 +116,29 @@ const ShareLinks: React.FC<ShareLinksProps> = ({ viewLink, editLink }) => {
             >
               <Copy className="h-4 w-4" />
             </Button>
-            <Button onClick={() => handleShare(viewLink)}>
-              Compartilhar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>Compartilhar</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleSocialShare('whatsapp', viewLink)}>
+                  <WhatsApp className="mr-2 h-4 w-4" />
+                  <span>WhatsApp</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSocialShare('telegram', viewLink)}>
+                  <Telegram className="mr-2 h-4 w-4" />
+                  <span>Telegram</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSocialShare('instagram', viewLink)}>
+                  <Instagram className="mr-2 h-4 w-4" />
+                  <span>Instagram</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSocialShare('discord', viewLink)}>
+                  <Discord className="mr-2 h-4 w-4" />
+                  <span>Discord</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             Compartilhe este link com seus clientes. Eles poderão ver seus produtos.
