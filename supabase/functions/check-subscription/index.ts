@@ -29,7 +29,31 @@ serve(async (req) => {
     }
 
     console.log("Checking subscription for email:", email);
+    
+    // Special case for braianzavadil1@gmail.com - always grant premium
+    if (email === "braianzavadil1@gmail.com") {
+      // Ensure this user has premium status in the subscribers table
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      
+      await supabaseClient.from("subscribers").upsert({
+        email: email,
+        user_id: userId || null,
+        subscribed: true,
+        subscription_end: oneYearFromNow.toISOString(),
+        subscription_tier: "premium",
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'email' });
+      
+      return new Response(JSON.stringify({
+        subscribed: true,
+        subscription_end: oneYearFromNow.toISOString()
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
+    // Regular process for other users
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     });
