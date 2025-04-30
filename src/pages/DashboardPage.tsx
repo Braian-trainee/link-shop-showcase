@@ -13,6 +13,7 @@ import ShareLinks from "../components/ShareLinks";
 import PremiumBanner from "../components/PremiumBanner";
 import PremiumFeatures from "../components/PremiumFeatures";
 import { toast } from "../components/ui/sonner";
+import ProductAnalytics from "../components/ProductAnalytics";
 
 const DashboardPage: React.FC = () => {
   const { user, isPremium, checkPremiumStatus } = useAuth();
@@ -110,6 +111,7 @@ const DashboardPage: React.FC = () => {
               <TabsList className="mb-6">
                 <TabsTrigger value="products">Produtos</TabsTrigger>
                 <TabsTrigger value="appearance">Aparência</TabsTrigger>
+                <TabsTrigger value="analytics">Análise</TabsTrigger>
                 <TabsTrigger value="share">Compartilhar</TabsTrigger>
               </TabsList>
               
@@ -155,6 +157,10 @@ const DashboardPage: React.FC = () => {
                   currentWallpaper={catalog?.wallpaperUrl || null} 
                   onSave={setWallpaper} 
                 />
+              </TabsContent>
+              
+              <TabsContent value="analytics">
+                <ProductAnalytics products={products} />
               </TabsContent>
               
               <TabsContent value="share">
