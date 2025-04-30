@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
@@ -14,12 +14,23 @@ import PremiumBanner from "../components/PremiumBanner";
 import PremiumFeatures from "../components/PremiumFeatures";
 
 const DashboardPage: React.FC = () => {
-  const { user, isPremium } = useAuth();
+  const { user, isPremium, checkPremiumStatus } = useAuth();
   const { catalog, isLoading, products, addProduct, updateProduct, removeProduct, setWallpaper, getViewLink, getEditLink } = useCatalog();
   const navigate = useNavigate();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
+  const [refreshingStatus, setRefreshingStatus] = useState(false);
+
+  // Force refresh premium status on page load
+  useEffect(() => {
+    if (user) {
+      setRefreshingStatus(true);
+      checkPremiumStatus().finally(() => {
+        setRefreshingStatus(false);
+      });
+    }
+  }, [user, checkPremiumStatus]);
 
   // Redirect if not logged in
   React.useEffect(() => {
@@ -28,7 +39,7 @@ const DashboardPage: React.FC = () => {
     }
   }, [user, isLoading, navigate]);
 
-  if (isLoading) {
+  if (isLoading || refreshingStatus) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
