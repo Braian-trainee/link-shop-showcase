@@ -12,6 +12,7 @@ import WallpaperSelector from "../components/WallpaperSelector";
 import ShareLinks from "../components/ShareLinks";
 import PremiumBanner from "../components/PremiumBanner";
 import PremiumFeatures from "../components/PremiumFeatures";
+import { toast } from "../components/ui/sonner";
 
 const DashboardPage: React.FC = () => {
   const { user, isPremium, checkPremiumStatus } = useAuth();
@@ -26,9 +27,19 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     if (user) {
       setRefreshingStatus(true);
-      checkPremiumStatus().finally(() => {
-        setRefreshingStatus(false);
-      });
+      checkPremiumStatus()
+        .then(isPremium => {
+          console.log("Premium status check:", isPremium ? "Premium" : "Not premium");
+          if (isPremium && user.email === "braianzavadil1@gmail.com") {
+            toast.success("Conta premium ativa até 30/04/2026");
+          }
+        })
+        .catch(error => {
+          console.error("Error checking premium status:", error);
+        })
+        .finally(() => {
+          setRefreshingStatus(false);
+        });
     }
   }, [user, checkPremiumStatus]);
 
@@ -84,6 +95,11 @@ const DashboardPage: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold">Dashboard</h1>
             <p className="text-gray-600">Gerencie seu catálogo de produtos</p>
+            {isPremium && user?.email === "braianzavadil1@gmail.com" && (
+              <p className="text-sm text-green-600 font-medium mt-1">
+                Conta premium ativa até 30/04/2026
+              </p>
+            )}
           </div>
           <Button onClick={handlePreview}>Visualizar Catálogo</Button>
         </div>

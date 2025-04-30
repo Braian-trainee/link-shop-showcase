@@ -31,6 +31,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) return false;
       
+      console.log("Checking premium status for:", user.email);
+      
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         body: {
           email: user.email,
@@ -38,10 +40,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Premium check error:", error);
+        throw error;
+      }
+      
+      console.log("Premium check response:", data);
       
       const premium = data.subscribed;
       setIsPremium(premium);
+      
+      // Update the local storage user to include the premium status
+      if (user) {
+        const updatedUser = { ...user, isPremium: premium };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+      
       return premium;
     } catch (error) {
       console.error("Premium check error:", error);
@@ -55,6 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.error("Por favor, faça login para assinar o plano premium");
         return;
       }
+      
+      console.log("Starting premium subscription for:", user.email);
       
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: {
@@ -80,7 +96,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        checkPremiumStatus();
+        // Always check premium status on initial load
+        setTimeout(() => {
+          checkPremiumStatus();
+        }, 500);
       } catch (error) {
         console.error("Failed to parse stored user:", error);
         localStorage.removeItem('user');
@@ -101,6 +120,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(mockUser);
         localStorage.setItem('user', JSON.stringify(mockUser));
         toast.success("Login bem-sucedido!");
+        
+        // Always check premium status after login
+        setTimeout(() => {
+          checkPremiumStatus();
+        }, 500);
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -123,6 +147,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(mockUser);
         localStorage.setItem('user', JSON.stringify(mockUser));
         toast.success("Conta criada com sucesso!");
+        
+        // Always check premium status after registration
+        setTimeout(() => {
+          checkPremiumStatus();
+        }, 500);
       }
     } catch (error) {
       console.error("Register error:", error);
