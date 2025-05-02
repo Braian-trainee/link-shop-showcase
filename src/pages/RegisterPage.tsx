@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -11,7 +11,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const RegisterPage: React.FC = () => {
-  const { register } = useAuth();
+  const { register, user } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,9 +19,86 @@ const RegisterPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<string>("");
+
+  // Redirecionar se usuário já estiver logado
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+
+  // Verificar força da senha
+  useEffect(() => {
+    if (!password) {
+      setPasswordStrength("");
+      return;
+    }
+    
+    let strength = "";
+    
+    // Verificar comprimento
+    if (password.length < 8) {
+      strength = "fraca";
+    } else if (password.length >= 12) {
+      strength = "forte";
+    } else {
+      strength = "média";
+    }
+    
+    // Verificar complexidade
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumbers = /[0-9]/.test(password);
+    const hasSpecialChars = /[^A-Za-z0-9]/.test(password);
+    
+    const complexity = [hasUppercase, hasLowercase, hasNumbers, hasSpecialChars].filter(Boolean).length;
+    
+    if (complexity === 4) {
+      strength = "forte";
+    } else if (complexity === 3 && strength !== "fraca") {
+      strength = "média";
+    } else if (complexity < 3) {
+      strength = "fraca";
+    }
+    
+    setPasswordStrength(strength);
+  }, [password]);
+
+  const getStrengthColor = () => {
+    switch (passwordStrength) {
+      case "fraca":
+        return "text-red-500";
+      case "média":
+        return "text-yellow-500";
+      case "forte":
+        return "text-green-500";
+      default:
+        return "";
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validação básica
+    if (!email.trim() || !password.trim()) {
+      toast.error("Email e senha são obrigatórios");
+      return;
+    }
+    
+    // Validar formato do email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Formato de email inválido");
+      return;
+    }
+
+    // Validar força da senha
+    if (password.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres");
+      return;
+    }
     
     if (password !== confirmPassword) {
       toast.error("As senhas não conferem!");
@@ -31,6 +108,12 @@ const RegisterPage: React.FC = () => {
     if (!agreedToTerms) {
       toast.error("Você precisa concordar com os Termos de Uso e Política de Privacidade.");
       return;
+    }
+    
+    // Validar força da senha
+    if (passwordStrength === "fraca") {
+      toast.warning("Recomendamos uma senha mais forte para maior segurança");
+      // Continuamos o processo, mas alertamos o usuário
     }
     
     setIsLoading(true);
@@ -68,6 +151,8 @@ const RegisterPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+                autoComplete="email"
               />
             </div>
 
@@ -81,11 +166,14 @@ const RegisterPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   minLength={8}
+                  disabled={isLoading}
+                  autoComplete="new-password"
                 />
                 <button 
                   type="button"
                   onClick={() => setShowPassword(!showPassword)} 
                   className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  disabled={isLoading}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 text-gray-500" />
@@ -94,9 +182,16 @@ const RegisterPage: React.FC = () => {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-gray-500">
-                A senha deve ter pelo menos 8 caracteres
-              </p>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">
+                  A senha deve ter pelo menos 8 caracteres
+                </span>
+                {passwordStrength && (
+                  <span className={`font-medium ${getStrengthColor()}`}>
+                    Senha {passwordStrength}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -108,6 +203,8 @@ const RegisterPage: React.FC = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 minLength={8}
+                disabled={isLoading}
+                autoComplete="new-password"
               />
             </div>
 
@@ -116,6 +213,7 @@ const RegisterPage: React.FC = () => {
                 id="terms" 
                 checked={agreedToTerms}
                 onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                disabled={isLoading}
               />
               <div className="grid gap-1.5 leading-none">
                 <label

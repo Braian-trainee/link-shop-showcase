@@ -5,14 +5,17 @@ import { Button } from "./ui/button";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "./ui/sonner";
 import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const PremiumBanner: React.FC = () => {
   const { user, isPremium, startPremiumSubscription } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleUpgrade = async () => {
     if (!user) {
       toast.error("Por favor, faça login para assinar o plano premium");
+      navigate("/login"); // Redireciona para a página de login
       return;
     }
 

@@ -29,6 +29,12 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // Verificar se o token Stripe está configurado
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      throw new Error("STRIPE_SECRET_KEY environment variable is not set");
+    }
+
     // Parse the request body for the user data
     const requestData = await req.json();
     const { email, userId } = requestData;
@@ -39,13 +45,18 @@ serve(async (req) => {
     if (!email) {
       throw new Error("Email is required");
     }
+    
+    if (!userId) {
+      throw new Error("User ID is required for security reasons");
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new Error("Invalid email format");
+    }
 
     logStep("Creating checkout session for email", { email });
-
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
-      throw new Error("STRIPE_SECRET_KEY environment variable is not set");
-    }
 
     const stripe = new Stripe(stripeKey, {
       apiVersion: "2023-10-16",
@@ -65,6 +76,19 @@ serve(async (req) => {
     // Create Stripe checkout session
     logStep("Creating checkout session");
     const origin = req.headers.get("origin") || "http://localhost:5173";
+    // Verificar se a origem é válida
+    const validOrigins = [
+      "http://localhost:5173",
+      "https://preview--link-shop-showcase.lovable.app",
+      "https://link-shop-showcase.lovable.app",
+      "https://b180e0c0-d2e2-4215-88aa-4b49c2ecd66e.lovableproject.com",
+    ];
+    
+    if (!validOrigins.includes(origin)) {
+      logStep("Invalid origin", { origin });
+      throw new Error("Invalid request origin");
+    }
+    
     logStep("Request origin", { origin });
     
     const session = await stripe.checkout.sessions.create({
@@ -87,6 +111,9 @@ serve(async (req) => {
       mode: "subscription",
       success_url: `${origin}/dashboard?success=true`,
       cancel_url: `${origin}/dashboard?canceled=true`,
+      metadata: {
+        userId: userId, // Armazenar o ID do usuário para referência futura
+      },
     });
     
     logStep("Session created", { 
