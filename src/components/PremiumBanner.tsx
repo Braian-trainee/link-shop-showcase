@@ -18,11 +18,13 @@ const PremiumBanner: React.FC = () => {
 
     setIsLoading(true);
     try {
+      console.log("Starting premium subscription from banner");
       await startPremiumSubscription();
+      // Note: We don't set isLoading to false here because we're redirecting to Stripe
     } catch (error) {
       console.error("Upgrade error:", error);
-    } finally {
       setIsLoading(false);
+      toast.error("Erro ao iniciar o processo de assinatura. Tente novamente.");
     }
   };
 

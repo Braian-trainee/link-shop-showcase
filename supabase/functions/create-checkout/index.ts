@@ -8,12 +8,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Helper logging function for enhanced debugging
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    logStep("Function started");
+
     // Use service role key to bypass RLS
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -22,28 +30,43 @@ serve(async (req) => {
     );
 
     // Parse the request body for the user data
-    const { email, userId } = await req.json();
+    const requestData = await req.json();
+    const { email, userId } = requestData;
+
+    logStep("Request data parsed", { email, userId: userId || "not provided" });
 
     // Validate request data
     if (!email) {
       throw new Error("Email is required");
     }
 
-    console.log("Creating checkout session for email:", email);
+    logStep("Creating checkout session for email", { email });
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      throw new Error("STRIPE_SECRET_KEY environment variable is not set");
+    }
+
+    const stripe = new Stripe(stripeKey, {
       apiVersion: "2023-10-16",
     });
 
     // Check if customer already exists in Stripe
+    logStep("Checking if customer exists");
     const customers = await stripe.customers.list({ email: email, limit: 1 });
     let customerId;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
-      console.log("Found existing customer:", customerId);
+      logStep("Found existing customer", { customerId });
+    } else {
+      logStep("No existing customer found");
     }
 
     // Create Stripe checkout session
+    logStep("Creating checkout session");
+    const origin = req.headers.get("origin") || "http://localhost:5173";
+    logStep("Request origin", { origin });
+    
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : email,
@@ -62,12 +85,18 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/dashboard?success=true`,
-      cancel_url: `${req.headers.get("origin")}/dashboard?canceled=true`,
+      success_url: `${origin}/dashboard?success=true`,
+      cancel_url: `${origin}/dashboard?canceled=true`,
+    });
+    
+    logStep("Session created", { 
+      sessionId: session.id,
+      sessionUrl: session.url || "URL not available"
     });
 
     // If we have a user ID, update the subscribers table
     if (userId) {
+      logStep("Updating subscribers table", { userId });
       await supabaseClient.from("subscribers").upsert({
         email: email,
         user_id: userId,
@@ -75,13 +104,19 @@ serve(async (req) => {
       }, { onConflict: 'email' });
     }
 
+    if (!session.url) {
+      throw new Error("Stripe session URL is undefined");
+    }
+
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error("Error creating checkout:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Error creating checkout:", errorMessage);
+    
+    return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

@@ -72,17 +72,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log("Starting premium subscription for:", user.email);
       
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
+      const response = await supabase.functions.invoke('create-checkout', {
         body: {
           email: user.email,
           userId: user.id
         }
       });
       
-      if (error) throw error;
+      if (response.error) {
+        console.error("Checkout error:", response.error);
+        toast.error(`Erro ao iniciar checkout: ${response.error.message || 'Tente novamente.'}`);
+        return;
+      }
       
-      if (data.url) {
-        window.location.href = data.url;
+      console.log("Checkout response:", response.data);
+      
+      if (response.data?.url) {
+        console.log("Redirecting to checkout URL:", response.data.url);
+        window.location.href = response.data.url;
+      } else {
+        console.error("No checkout URL received");
+        toast.error("Erro ao iniciar checkout. URL do checkout não encontrada.");
       }
     } catch (error) {
       console.error("Checkout error:", error);

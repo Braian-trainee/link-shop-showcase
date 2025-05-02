@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
@@ -32,11 +31,13 @@ const PricingPage: React.FC = () => {
 
     setIsLoading(true);
     try {
+      console.log("Starting premium subscription from pricing page");
       await startPremiumSubscription();
+      // Note: We don't set isLoading to false here because we're redirecting to Stripe
     } catch (error) {
       console.error("Premium subscription error:", error);
-    } finally {
       setIsLoading(false);
+      toast.error("Erro ao iniciar checkout. Tente novamente.");
     }
   };
 
