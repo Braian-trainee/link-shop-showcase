@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -8,105 +7,116 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Helper logging function for enhanced debugging
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
+};
+
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
-  );
-
   try {
-    // Parse the request body for the user data
+    // Parse the request body
     const { email, userId } = await req.json();
+    
+    logStep("Checking subscription for email", { email });
 
-    // Validate request data
+    // Input validation
     if (!email) {
       throw new Error("Email is required");
     }
 
-    console.log("Checking subscription for email:", email);
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new Error("Invalid email format");
+    }
+
+    // Create a Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    // Check if the user is subscribed
+    const { data, error } = await supabaseClient
+      .from("subscribers")
+      .select("subscribed, subscription_end")
+      .eq("email", email)
+      .single();
+
+    if (error) {
+      logStep("Error checking subscription", { error });
+      
+      // If record not found, return false (not subscribed)
+      if (error.code === "PGRST116") {
+        return new Response(
+          JSON.stringify({ subscribed: false, message: "User not found in subscribers" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      throw error;
+    }
+
+    // Check if subscription is active and not expired
+    let isSubscribed = data?.subscribed || false;
     
-    // Special case for braianzavadil1@gmail.com - always grant premium
-    if (email === "braianzavadil1@gmail.com") {
-      // Ensure this user has premium status in the subscribers table
-      const oneYearFromNow = new Date();
-      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+    // Check if subscription has an end date and if it's in the future
+    if (isSubscribed && data?.subscription_end) {
+      const endDate = new Date(data.subscription_end);
+      const now = new Date();
       
-      await supabaseClient.from("subscribers").upsert({
-        email: email,
-        user_id: userId || null,
-        subscribed: true,
-        subscription_end: oneYearFromNow.toISOString(),
-        subscription_tier: "premium",
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'email' });
-      
-      return new Response(JSON.stringify({
-        subscribed: true,
-        subscription_end: oneYearFromNow.toISOString()
-      }), {
+      if (endDate < now) {
+        // Subscription has expired
+        isSubscribed = false;
+        
+        // Update the database to reflect this
+        try {
+          await supabaseClient
+            .from("subscribers")
+            .update({ 
+              subscribed: false,
+              updated_at: now.toISOString()
+            })
+            .eq("email", email);
+            
+          logStep("Updated expired subscription", { email });
+        } catch (updateError) {
+          // Log but don't fail on update error
+          logStep("Error updating expired subscription", { updateError });
+        }
+      }
+    }
+
+    logStep("Subscription check complete", { 
+      email,
+      subscribed: isSubscribed
+    });
+
+    return new Response(
+      JSON.stringify({ 
+        subscribed: isSubscribed,
+        subscription_end: data?.subscription_end || null
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    logStep("Error checking subscription", { error: err });
+    
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Regular process for other users
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2023-10-16",
-    });
-    
-    const customers = await stripe.customers.list({ email: email, limit: 1 });
-    if (customers.data.length === 0) {
-      await supabaseClient.from("subscribers").upsert({
-        email: email,
-        user_id: userId || null,
-        subscribed: false,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'email' });
-      
-      return new Response(JSON.stringify({ subscribed: false }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const customerId = customers.data[0].id;
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-      limit: 1,
-    });
-
-    const hasActiveSub = subscriptions.data.length > 0;
-    let subscriptionEnd = null;
-    
-    if (hasActiveSub) {
-      subscriptionEnd = new Date(subscriptions.data[0].current_period_end * 1000).toISOString();
-    }
-
-    await supabaseClient.from("subscribers").upsert({
-      email: email,
-      user_id: userId || null,
-      stripe_customer_id: customerId,
-      subscribed: hasActiveSub,
-      subscription_end: subscriptionEnd,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'email' });
-
-    return new Response(JSON.stringify({
-      subscribed: hasActiveSub,
-      subscription_end: subscriptionEnd
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
-  } catch (error) {
-    console.error("Error checking subscription:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+        status: 500
+      }
+    );
   }
 });

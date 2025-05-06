@@ -29,7 +29,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Verificar se o token Stripe está configurado
+    // Verify Stripe secret key is configured
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
       throw new Error("STRIPE_SECRET_KEY environment variable is not set");
@@ -41,7 +41,7 @@ serve(async (req) => {
 
     logStep("Request data parsed", { email, userId: userId || "not provided" });
 
-    // Validate request data
+    // Security checks - input validation
     if (!email) {
       throw new Error("Email is required");
     }
@@ -55,6 +55,22 @@ serve(async (req) => {
     if (!emailRegex.test(email)) {
       throw new Error("Invalid email format");
     }
+
+    // Security check - validate request origin
+    const origin = req.headers.get("origin") || "http://localhost:5173";
+    const validOrigins = [
+      "http://localhost:5173",
+      "https://preview--link-shop-showcase.lovable.app",
+      "https://link-shop-showcase.lovable.app",
+      "https://b180e0c0-d2e2-4215-88aa-4b49c2ecd66e.lovableproject.com",
+    ];
+    
+    if (!validOrigins.includes(origin)) {
+      logStep("Invalid origin", { origin });
+      throw new Error("Invalid request origin");
+    }
+    
+    logStep("Request origin validated", { origin });
 
     logStep("Creating checkout session for email", { email });
 
@@ -74,22 +90,7 @@ serve(async (req) => {
     }
 
     // Create Stripe checkout session
-    logStep("Creating checkout session");
-    const origin = req.headers.get("origin") || "http://localhost:5173";
-    // Verificar se a origem é válida
-    const validOrigins = [
-      "http://localhost:5173",
-      "https://preview--link-shop-showcase.lovable.app",
-      "https://link-shop-showcase.lovable.app",
-      "https://b180e0c0-d2e2-4215-88aa-4b49c2ecd66e.lovableproject.com",
-    ];
-    
-    if (!validOrigins.includes(origin)) {
-      logStep("Invalid origin", { origin });
-      throw new Error("Invalid request origin");
-    }
-    
-    logStep("Request origin", { origin });
+    logStep("Creating checkout session");    
     
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -112,7 +113,7 @@ serve(async (req) => {
       success_url: `${origin}/dashboard?success=true`,
       cancel_url: `${origin}/dashboard?canceled=true`,
       metadata: {
-        userId: userId, // Armazenar o ID do usuário para referência futura
+        userId: userId, // Store the user ID for reference
       },
     });
     
@@ -121,14 +122,27 @@ serve(async (req) => {
       sessionUrl: session.url || "URL not available"
     });
 
-    // If we have a user ID, update the subscribers table
-    if (userId) {
+    // Store user information in subscribers table with robust error handling
+    try {
       logStep("Updating subscribers table", { userId });
-      await supabaseClient.from("subscribers").upsert({
+      
+      const { error } = await supabaseClient.from("subscribers").upsert({
         email: email,
         user_id: userId,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'email' });
+      
+      if (error) {
+        logStep("Error updating subscribers table", { error });
+        console.error("Error updating subscribers:", error);
+        // Continue execution - don't fail the checkout just because we couldn't update the table
+      } else {
+        logStep("Successfully updated subscribers table");
+      }
+    } catch (subscriberError) {
+      logStep("Exception when updating subscribers table", { error: String(subscriberError) });
+      console.error("Exception updating subscribers:", subscriberError);
+      // Continue execution
     }
 
     if (!session.url) {
